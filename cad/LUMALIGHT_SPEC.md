@@ -24,9 +24,9 @@ on the front near the base, **LUMALIEN** on the back. The USB-C cable leaves thr
 | Sensor slit | 16 × 5 through the wall, centre z 30.5, 1 mm outward chamfer | sized for the VL53L1X 27° FOV at 10 mm behind the face |
 | Sensor rails | C-channels on the inner front wall at x −15.7..−11.2 and 9.2..13.7, slot y 10..12, z 9..35, bottom stops at z 8..9 | board drops in from above (before the ring goes in), JST points down, cable bends in the 6 mm above the base plate |
 | Sensor board | x −12.5..10.5, PCB y 10..11.6, z 9..35.5 | component side faces the wall; package assumed at (12.5, 21.5) on the board |
-| ESP32 | vertical, USB-C down, bottom edge z 34, centred in X; PCB y 26.6..28.2, pins toward the front | components face the spine; dupont housings occupy y 10..24 |
-| Spine | on the base plate, 36 wide × 3 thick, y 33.7..36.7, z 3..92; cable notch x ±6 up to z 16 | 4 standoffs Ø6 × 5.5 at (±11.6, 36.5) and (±11.6, 83.3), Ø2.0 pilots, M2.5 self-tap |
-| USB-C plug | hangs below the board, y ≈ 26.5..33, down to z ≈ 11 | cable bends to the back-wall notch 9 wide × 10 tall |
+| ESP32 | vertical, USB-C down, bottom edge z 34, centred in X; PCB y 26.7..28.3, pins toward the front | components face the spine; dupont housings occupy y 10..24 |
+| Spine | on the base plate, 36 wide × 3 thick, y 33.8..36.8 (flush with the plate's back edge), z 3..92; cable notch x ±6 up to z 16 | 4 standoffs Ø6 × 5.5 at (±11.6, 36.5) and (±11.6, 83.3), Ø2.0 pilots, M2.5 self-tap |
+| USB-C plug | hangs below the board, y ≈ 26.6..33.2, down to z ≈ 11 | cable bends to the back-wall notch 9 wide × 10 tall |
 | Base plate | 55.6 × 33.6 × 3, flush with the bottom | 2 × M2.5 self-tap at (±25, 20) into 6 × 6 bosses on the inner side walls, counterbored from below |
 | Top L-mark | 22 tall, centred on the top face, 1.2 deep | purple inlays (L + triangle) 0.15 clearance, 1.4 thick → 0.2 proud; glue in |
 | Text | LUMALIGHT front, centre z 11; LUMALIEN back, centre z 23; Segoe UI Bold 7, 0.6 deep | |
@@ -36,7 +36,7 @@ on the front near the base, **LUMALIEN** on the back. The USB-C cable leaves thr
 | Part | Material | Orientation |
 |---|---|---|
 | LUMALIGHT BODY | white | upside down, top face on the bed, no supports |
-| LUMALIGHT BASE PLATE + spine | white | flat, spine up |
+| LUMALIGHT BASE PLATE + spine | white | on its back: spine face on the bed, standoffs pointing up, the plate stands as a 33.6 mm fin. No supports |
 | LUMALIGHT DIFFUSER | transparent | flange face down (bed texture frosts it) |
 | LUMALIGHT LOGO INLAY L / TRI | purple | flat |
 
