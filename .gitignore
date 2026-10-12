@@ -10,3 +10,7 @@ compile_commands.json
 .vscode/
 .pioenvs/
 .piolibdeps/
+
+# Blender backups
+*.blend1
+*.blend2
