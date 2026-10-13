@@ -3,8 +3,20 @@
 #include <Wire.h>
 #include <VL53L1X.h>
 #include <Adafruit_NeoPixel.h>
+#include <WiFi.h>
+#include <ArduinoOTA.h>
 
-// LumaLight V1.1
+// Wi-Fi flashing needs include/secrets.h (copy secrets.example.h).
+// Without it the light builds and works, USB flashing only.
+#if __has_include("secrets.h")
+#include "secrets.h"
+#define HAS_WIFI 1
+#else
+#define HAS_WIFI 0
+#warning "include/secrets.h missing: building without Wi-Fi flashing"
+#endif
+
+// LumaLight V1.2
 // Proximity lighting + pixel sweep
 // Off: snapshot the range, any change turns it on
 
@@ -29,6 +41,7 @@ constexpr uint32_t ACTIVE_MS = 120000;
 constexpr uint32_t SWEEP_MS = 1100;
 constexpr uint32_t FADE_OUT_MS = 1000;
 constexpr uint32_t FRAME_MS = 20;
+constexpr uint32_t WIFI_RETRY_MS = 30000;
 
 // USB-friendly maximum electrical brightness
 constexpr float MAX_BRIGHTNESS = 110.0f;
@@ -51,6 +64,9 @@ uint32_t activatedAt = 0;
 uint32_t fadeAt = 0;
 uint32_t lastFrame = 0;
 uint32_t lastLog = 0;
+uint32_t lastWifiTry = 0;
+
+bool otaStarted = false;
 
 int activationSamples = 0;
 int lastDistance = -1;
@@ -357,11 +373,65 @@ void logStatus() {
     );
 }
 
+#if HAS_WIFI
+
+// Wi-Fi is only for flashing. The light never waits on it.
+void beginWifi() {
+    WiFi.mode(WIFI_STA);
+    WiFi.setHostname("lumalight");
+    WiFi.setAutoReconnect(true);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+    ArduinoOTA.setHostname("lumalight");
+    ArduinoOTA.setPassword(OTA_PASSWORD);
+
+    ArduinoOTA.onStart([]() {
+        ring.clear();
+        ring.show();
+        Serial.println("[OTA] Updating");
+    });
+
+    ArduinoOTA.onError([](ota_error_t error) {
+        Serial.printf("[OTA] Failed (%u)\n", error);
+    });
+}
+
+void updateWifi() {
+    uint32_t now = millis();
+
+    if (WiFi.status() != WL_CONNECTED) {
+        if (now - lastWifiTry >= WIFI_RETRY_MS) {
+            lastWifiTry = now;
+            WiFi.reconnect();
+        }
+        return;
+    }
+
+    if (!otaStarted) {
+        ArduinoOTA.begin();
+        otaStarted = true;
+
+        Serial.printf(
+            "[WIFI] lumalight.local at %s\n",
+            WiFi.localIP().toString().c_str()
+        );
+    }
+
+    ArduinoOTA.handle();
+}
+
+#else
+
+void beginWifi() {}
+void updateWifi() {}
+
+#endif
+
 void setup() {
     Serial.begin(115200);
     delay(500);
 
-    Serial.println("=== LumaLight V1.1 ===");
+    Serial.println("=== LumaLight V1.2 ===");
 
     ring.begin();
     ring.setBrightness(255);
@@ -384,6 +454,8 @@ void setup() {
     sensor.setMeasurementTimingBudget(50000);
     sensor.startContinuous(75);
 
+    beginWifi();
+
     Serial.println("[SENSOR] Ready");
     Serial.println("[LIGHT] Turns on when the range changes");
     Serial.println("[LIGHT] Timeout: 120 seconds");
@@ -394,5 +466,6 @@ void loop() {
     updateSensor();
     renderLights();
     logStatus();
+    updateWifi();
 }
 

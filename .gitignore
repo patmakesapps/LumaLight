@@ -14,3 +14,7 @@ compile_commands.json
 # Blender backups
 *.blend1
 *.blend2
+
+# Wi-Fi and flashing passwords
+include/secrets.h
+secrets.ini
