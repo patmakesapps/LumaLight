@@ -7,13 +7,15 @@
 #include <ArduinoOTA.h>
 
 // Wi-Fi flashing needs include/secrets.h (copy secrets.example.h).
-// Without it the light builds and works, USB flashing only.
-#if __has_include("secrets.h")
+// Without it, or with NO_WIFI (the gift env), the light builds and works, USB flashing only.
+#if !defined(NO_WIFI) && __has_include("secrets.h")
 #include "secrets.h"
 #define HAS_WIFI 1
 #else
 #define HAS_WIFI 0
+#ifndef NO_WIFI
 #warning "include/secrets.h missing: building without Wi-Fi flashing"
+#endif
 #endif
 
 // LumaLight V1.2

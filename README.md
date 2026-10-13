@@ -78,6 +78,18 @@ Troubleshooting:
 - **`lumalight.local` not found.** Reserve an IP address for the light in your router, and set `upload_port` in the
   `[env:ota]` section of `platformio.ini` to that IP.
 
+## Building lights for other people
+
+Use the gift build. It leaves Wi-Fi out, so your Wi-Fi name and passwords never end up on someone else's light,
+even with `include/secrets.h` in place:
+
+```sh
+pio run -e gift -t upload
+```
+
+The light needs nothing else. Give it with a 5 V USB wall plug (1 A or more). At power-up it takes its snapshot
+of the empty room, so plug it in, wait 5 seconds with nobody in front of it, then walk past to test.
+
 ## License
 
 [MIT](LICENSE). This covers the firmware and the enclosure files in `cad/`.
