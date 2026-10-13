@@ -5,7 +5,8 @@
 #include <Adafruit_NeoPixel.h>
 
 // LumaLight V1.1
-// Proximity lighting + pixel sweep + hand reactivation
+// Proximity lighting + pixel sweep
+// Off: snapshot the range, any change turns it on
 
 constexpr int SDA_PIN = 21;
 constexpr int SCL_PIN = 22;
@@ -14,20 +15,19 @@ constexpr int LED_COUNT = 12;
 
 // Distances in millimeters
 constexpr int ACTIVATION_MM = 1524; // 5 feet
-constexpr int REARM_MM = 1700;
+// Readings past this (or no target) all count as "far"
+constexpr int FAR_MM = 1800;
 constexpr int CLOSE_MM = 300;
 constexpr int MID_MM = 900;
 
-// Hand gesture thresholds
-constexpr int WAVE_READY_MM = 650;
-constexpr int WAVE_TRIGGER_MM = 350;
+// Off: a change this big from the snapshot counts as motion
+constexpr int CHANGE_MM = 150;
+constexpr int SNAPSHOT_SAMPLES = 5;
 
 // Timing
 constexpr uint32_t ACTIVE_MS = 120000;
 constexpr uint32_t SWEEP_MS = 1100;
 constexpr uint32_t FADE_OUT_MS = 1000;
-constexpr uint32_t COOLDOWN_MS = 2000;
-constexpr uint32_t CLEAR_MS = 1000;
 constexpr uint32_t FRAME_MS = 20;
 
 // USB-friendly maximum electrical brightness
@@ -39,24 +39,26 @@ Adafruit_NeoPixel ring(
 );
 
 enum class State {
-    IDLE,
+    SNAPSHOT,
+    WATCHING,
     ACTIVE,
-    FADING,
-    WAIT_REARM
+    FADING
 };
 
-State state = State::IDLE;
+State state = State::SNAPSHOT;
 
 uint32_t activatedAt = 0;
 uint32_t fadeAt = 0;
-uint32_t waitAt = 0;
-uint32_t clearAt = 0;
 uint32_t lastFrame = 0;
 uint32_t lastLog = 0;
 
-bool waveReady = false;
 int activationSamples = 0;
 int lastDistance = -1;
+
+// Range snapshot taken when the light goes off
+float snapshotSum = 0;
+int snapshotCount = 0;
+float snapshot = FAR_MM;
 
 float filteredDistance = ACTIVATION_MM;
 float brightness = 0;
@@ -120,8 +122,6 @@ void activate(int distance) {
     displayedBrightness = 0;
     currentColor = PURPLE;
 
-    waveReady = false;
-    clearAt = 0;
     activationSamples = 0;
 
     Serial.println("[LIGHT] ACTIVATED");
@@ -151,13 +151,11 @@ void updateState() {
         ring.show();
 
         displayedBrightness = 0;
-        waitAt = now;
-        clearAt = 0;
-        waveReady = false;
-        state = State::WAIT_REARM;
+        snapshotSum = 0;
+        snapshotCount = 0;
+        state = State::SNAPSHOT;
 
         Serial.println("[LIGHT] OFF");
-        Serial.println("[LIGHT] 2 second cooldown");
     }
 }
 
@@ -180,14 +178,33 @@ void updateSensor() {
 
     lastDistance = valid ? distance : -1;
 
-    uint32_t now = millis();
+    // Other statuses are glitches; skip them
+    if (!valid && !noTarget) return;
+
+    int sample = noTarget ? FAR_MM : min(distance, FAR_MM);
 
     switch (state) {
 
-        case State::IDLE:
-            if (valid && distance <= ACTIVATION_MM) {
+        case State::SNAPSHOT:
+            snapshotSum += sample;
+
+            if (++snapshotCount >= SNAPSHOT_SAMPLES) {
+                snapshot = snapshotSum / snapshotCount;
+                activationSamples = 0;
+                state = State::WATCHING;
+
+                Serial.printf(
+                    "[LIGHT] Watching, range %.0fmm\n",
+                    snapshot
+                );
+            }
+            break;
+
+        case State::WATCHING:
+            // Any change from the snapshot, either way
+            if (fabsf(sample - snapshot) > CHANGE_MM) {
                 if (++activationSamples >= 2) {
-                    activate(distance);
+                    activate(min(sample, ACTIVATION_MM));
                 }
             } else {
                 activationSamples = 0;
@@ -211,49 +228,6 @@ void updateSensor() {
         case State::FADING:
             // Ignore activation while fading out.
             break;
-
-        case State::WAIT_REARM: {
-
-            // Minimum 2-second lock after lights go off
-            if (now - waitAt < COOLDOWN_MS) {
-                break;
-            }
-
-            // Automatic rearm if detection area clears
-            bool clear =
-                (valid && distance > REARM_MM) ||
-                noTarget;
-
-            if (clear) {
-                if (clearAt == 0) clearAt = now;
-
-                if (now - clearAt >= CLEAR_MS) {
-                    state = State::IDLE;
-                    waveReady = false;
-                    clearAt = 0;
-
-                    Serial.println("[LIGHT] Auto rearmed");
-                    break;
-                }
-            } else {
-                clearAt = 0;
-            }
-
-            // Manual reactivation:
-            // First see a farther distance,
-            // then detect a hand moving close.
-            if (valid && distance >= WAVE_READY_MM) {
-                waveReady = true;
-            }
-
-            if (waveReady && valid &&
-                distance <= WAVE_TRIGGER_MM) {
-
-                Serial.println("[GESTURE] Hand detected");
-                activate(distance);
-            }
-            break;
-        }
     }
 }
 
@@ -353,13 +327,13 @@ void logStatus() {
     if (now - lastLog < 1000) return;
     lastLog = now;
 
-    const char* name = "IDLE";
+    const char* name = "WATCHING";
 
     switch (state) {
-        case State::IDLE: name = "IDLE"; break;
+        case State::SNAPSHOT: name = "SNAPSHOT"; break;
+        case State::WATCHING: name = "WATCHING"; break;
         case State::ACTIVE: name = "ACTIVE"; break;
         case State::FADING: name = "FADING"; break;
-        case State::WAIT_REARM: name = "REARM"; break;
     }
 
     uint32_t remaining = 0;
@@ -374,12 +348,12 @@ void logStatus() {
     Serial.printf(
         "[LumaLight] %s | Distance: %dmm "
         "| Brightness: %.0f | Timer: %lus "
-        "| WaveReady: %s\n",
+        "| Snapshot: %.0fmm\n",
         name,
         lastDistance,
         displayedBrightness,
         (unsigned long)remaining,
-        waveReady ? "YES" : "NO"
+        snapshot
     );
 }
 
@@ -411,9 +385,8 @@ void setup() {
     sensor.startContinuous(75);
 
     Serial.println("[SENSOR] Ready");
-    Serial.println("[LIGHT] Activation: 5 feet");
+    Serial.println("[LIGHT] Turns on when the range changes");
     Serial.println("[LIGHT] Timeout: 120 seconds");
-    Serial.println("[LIGHT] Hand-wave reactivation enabled");
 }
 
 void loop() {
