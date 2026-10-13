@@ -1,11 +1,21 @@
 # LumaLight
 
+![LumaLight glowing in a dark room](docs/images/lumalight-night.jpg)
+
 A proximity nightlight. An ESP32 watches a VL53L1X time-of-flight sensor and lights a 12-LED NeoPixel ring when
 someone walks past. The colour shifts from purple to white and the light brightens as you get closer. It stays on
 for 2 minutes, then fades out. The sensor uses its own infrared laser, so it works in complete darkness.
 
 The 3D-printed enclosure is in [`cad/`](cad/). See [`cad/LUMALIGHT_SPEC.md`](cad/LUMALIGHT_SPEC.md) for parts,
 print orientation and assembly.
+
+Everything to buy is in [`BOM.md`](BOM.md). Project page: [lumalien.com/lumalight](https://www.lumalien.com/lumalight).
+
+| | |
+|---|---|
+| ![LumaLight lit on a bathroom counter](docs/images/lumalight-glow.jpg) | ![LumaLight off, in daylight](docs/images/lumalight-day.jpg) |
+
+![LumaLight from four angles: top, front, base and back panel](docs/images/lumalight-four-angles.jpg)
 
 ## Hardware
 
