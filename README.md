@@ -67,3 +67,7 @@ Troubleshooting:
   (`%USERPROFILE%\.platformio\python3\python.exe`) on Private networks.
 - **`lumalight.local` not found.** Reserve an IP address for the light in your router, and set `upload_port` in the
   `[env:ota]` section of `platformio.ini` to that IP.
+
+## License
+
+[MIT](LICENSE). This covers the firmware and the enclosure files in `cad/`.
